@@ -48,9 +48,9 @@ class SubmitC4DToSmedgeDialog(gui.GeDialog):
     CancelButtonID = 920
     
     def __init__(self):
-        if sys.platform() == "darwin":
-            self.SmedgeSubmitCommand = "/Applications/Smedge.app/Contents/MacOS/PoolManager"
-            self.SmedgePoolManagerCommand = "/Applications/Smedge.app/Contents/MacOS/Submit"
+        if sys.platform == "darwin":
+            self.SmedgeSubmitCommand = "/Applications/Smedge.app/Contents/MacOS/Submit"
+            self.SmedgePoolManagerCommand = "/Applications/Smedge.app/Contents/MacOS/PoolManager"
         else:
             self.SmedgeSubmitCommand = "C:\Program Files (x86)\Smedge\Submit.exe"
             self.SmedgePoolManagerCommand = "C:\Program Files (x86)\Smedge\PoolManager.exe"
