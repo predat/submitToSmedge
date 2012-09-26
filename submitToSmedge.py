@@ -20,8 +20,8 @@ from c4d import plugins
 ## The submission dialog class.
 class SubmitC4DToSmedgeDialog(gui.GeDialog):
     
-    SmedgeSubmitCommand = "/Applications/Smedge.app/Contents/MacOS/Submit"
-    SmedgePoolManagerCommand = "/Applications/Smedge.app/Contents/MacOS/PoolManager"
+    SmedgeSubmitCommand = ""
+    SmedgePoolManagerCommand = ""
     Pools = []
     
     LabelWidth = 200
@@ -48,9 +48,14 @@ class SubmitC4DToSmedgeDialog(gui.GeDialog):
     CancelButtonID = 920
     
     def __init__(self):
-        stdout = None
-        self.Pools = []
+        if sys.platform() == "darwin":
+            self.SmedgeSubmitCommand = "/Applications/Smedge.app/Contents/MacOS/PoolManager"
+            self.SmedgePoolManagerCommand = "/Applications/Smedge.app/Contents/MacOS/Submit"
+        else:
+            self.SmedgeSubmitCommand = "C:\Program Files (x86)\Smedge\Submit.exe"
+            self.SmedgePoolManagerCommand = "C:\Program Files (x86)\Smedge\PoolManager.exe"
         
+        stdout = None
         # Get the pools.
         try:
             print("Loading pools")
@@ -62,8 +67,7 @@ class SubmitC4DToSmedgeDialog(gui.GeDialog):
         except:
             print("Error getting pools from Deadline")
         
-        if len(self.Pools) == 0:
-            self.Pools.append("Whole System")
+        self.Pools.append("Whole System")
     
     def GetLabelID(self):
         self.LabelID = self.LabelID + 1
