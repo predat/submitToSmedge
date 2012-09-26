@@ -43,6 +43,8 @@ class SubmitC4DToSmedgeDialog(gui.GeDialog):
     RadioBoxID = 160
     CPUsBoxID = 180
     NoteBoxID = 200
+    SubmitBoxID = 220
+    PoolManagerBoxID = 240
     
     SubmitButtonID = 910
     CancelButtonID = 920
@@ -65,7 +67,7 @@ class SubmitC4DToSmedgeDialog(gui.GeDialog):
                 if len(line) != 0:
                     self.Pools.append(line.replace("\n","").split("\t")[1])
         except:
-            print("Error getting pools from Deadline")
+            print("Error getting pools from Smedge")
         
         self.Pools.append("Whole System")
     
@@ -122,43 +124,52 @@ class SubmitC4DToSmedgeDialog(gui.GeDialog):
                     self.LabelWidth + self.RangeBoxWidth + 4, 0, "", 0 )
         self.SetLong( id, min, min, max, inc )
         self.GroupEnd()
-    
+ 
+
+    ##
     ## This is called when the dialog is initialized.
+    ##
     def CreateLayout(self):
         self.SetTitle( "Submit To Smedge")
         
+
         # General Options Tab
+        self.TabGroupBegin( self.GetLabelID(), 0 )
         self.GroupBegin(self.GetLabelID(), 0, 0, 20, "General Options", 0)
         self.GroupBorderNoTitle(c4d.BORDER_NONE)
         
         self.StartGroup("Basic Job Info")
-        
         self.AddTextBoxGroup(self.NameBoxID, "Name")
-        self.AddTextBoxGroup(self.CreatorBoxID, "Creator")
         self.AddRangeBoxGroup(self.PriorityBoxID, "Priority", 0, 100, 1)
         self.AddRadioBoxGroup(self.RadioBoxID, "Processes", self.CPUsBoxID)
-        
         self.GroupBegin( self.GetLabelID(), 0, 3, 1, "", 0 )
         self.AddStaticText( self.GetLabelID(), 0, self.LabelWidth, 0, "Paused", 0 )
         self.AddCheckbox( self.PausedBoxID, 0, self.LabelWidth, 0, "")
         self.AddStaticText( self.GetLabelID(), 0, 410, 0, "", 0)
         self.GroupEnd()
-        
-        
         self.AddComboBoxGroup(self.PoolBoxID, "Pool")
         self.AddComboBoxGroup(self.WaitForBoxID, "Wait For")
         self.AddTextBoxGroup(self.NoteBoxID, "Note")
-
-        self.EndGroup()
+        self.EndGroup() # Basic Job Info
         
         self.StartGroup("Type Specific Parameters")
         self.AddTextBoxGroup(self.FramesBoxID, "Range to Process")
         self.AddTextBoxGroup(self.PacketBoxID, "Packet Size")
-        self.EndGroup()
+        self.EndGroup() # Type Specific Parameters
         
-        self.GroupEnd() #General Options Tab
-        #self.GroupEnd() #Tab group
+        self.GroupEnd() # 
+
+
+        self.GroupBegin(self.GetLabelID(), 0, 0, 20, "Settings", 0)
+        self.AddTextBoxGroup(self.SubmitBoxID, "Path to Submit")
+        self.AddTextBoxGroup(self.PoolManagerBoxID, "Path to PoolManager")
+        self.AddTextBoxGroup(self.CreatorBoxID, "Creator")       
+        self.GroupEnd()
+
+
+        self.GroupEnd() # End General Tap
         
+        # Submit & Cancel
         self.GroupBegin(self.GetLabelID(), 0, 2, 1, "", 0)
         self.AddButton(self.SubmitButtonID, 0, 100, 0, "Submit")
         self.AddButton(self.CancelButtonID, 0, 100, 0, "Cancel")
@@ -227,7 +238,9 @@ class SubmitC4DToSmedgeDialog(gui.GeDialog):
         self.SetString(self.FramesBoxID, initFrames)
         self.SetString(self.PacketBoxID, initPacketSize)
         self.SetString(self.CreatorBoxID, initCreator)
-        
+
+        self.SetString(self.SubmitBoxID, self.SmedgeSubmitCommand)
+        self.SetString(self.PoolManagerBoxID, self.SmedgePoolManagerCommand)
         return True
     
 
@@ -241,7 +254,13 @@ class SubmitC4DToSmedgeDialog(gui.GeDialog):
                 self.Enable(self.CPUsBoxID, True)
             else:
                 self.Enable(self.CPUsBoxID, False)
-        
+  
+        if id == self.SubmitBoxID:
+            self.SmedgeSubmitCommand = self.GetString(self.SubmitBoxID)
+
+        if id == self.PoolManagerBoxID:
+            self.SmedgePoolManagerCommand = self.GetString(self.PoolManagerBoxID)
+
         if id == self.SubmitButtonID or id == self.CancelButtonID:
             jobName =  self.GetString(self.NameBoxID)
             pool = self.Pools[self.GetLong(self.PoolBoxID)]
@@ -319,6 +338,7 @@ class SubmitC4DtoSmedgeMenu (plugins.CommandData):
 
 ## Global function to save the scene. Returns True if the scene has been saved and it's OK to continue.
 def SaveScene():
+    """
     scene = documents.GetActiveDocument()
     
     # Save the scene if required
@@ -328,6 +348,7 @@ def SaveScene():
         if scene.GetDocumentPath() == "":
             gui.MessageDialog("The scene must saved before it can be submitted to Smedge")
             return False
+    """
     return True
 
 
