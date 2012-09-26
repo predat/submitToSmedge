@@ -1,4 +1,15 @@
-import os, sys, subprocess, re
+# -*- coding: utf-8 -*-
+
+__author__ = "Sylvain Maziere aka predat"
+__copyright__ = "Copyright 2012, Sylvain Maziere"
+__license__ = "GPL"
+__version__ = "0.1"
+__maintainer__ = "Sylvain Maziere"
+__email__ = "sylvain@predat.fr"
+__status__ = "Development"
+
+
+import os, sys, subprocess, getpass
 
 import c4d
 from c4d import documents
@@ -8,6 +19,7 @@ from c4d import plugins
 
 ## The submission dialog class.
 class SubmitC4DToSmedgeDialog(gui.GeDialog):
+    
     SmedgeSubmitCommand = "/Applications/Smedge.app/Contents/MacOS/Submit"
     SmedgePoolManagerCommand = "/Applications/Smedge.app/Contents/MacOS/PoolManager"
     Pools = []
@@ -21,14 +33,17 @@ class SubmitC4DToSmedgeDialog(gui.GeDialog):
     
     LabelID = 1000
     NameBoxID = 10
+    CreatorBoxID = 20
     PoolBoxID = 40
     PriorityBoxID = 60
     WaitForBoxID = 80
     FramesBoxID = 100
     PacketBoxID = 120
     PausedBoxID = 140
-    radioboxID = 160
-
+    RadioBoxID = 160
+    CPUsBoxID = 180
+    NoteBoxID = 200
+    
     SubmitButtonID = 910
     CancelButtonID = 920
     
@@ -43,9 +58,9 @@ class SubmitC4DToSmedgeDialog(gui.GeDialog):
             output = stdout.read()
             for line in output.splitlines():
                 if len(line) != 0:
-                    self.Pools.append( line.replace("\n","").split("\t")[1] )
+                    self.Pools.append(line.replace("\n","").split("\t")[1])
         except:
-            print( "Error getting pools from Deadline" )
+            print("Error getting pools from Deadline")
         
         if len(self.Pools) == 0:
             self.Pools.append("Whole System")
@@ -67,25 +82,40 @@ class SubmitC4DToSmedgeDialog(gui.GeDialog):
         self.AddStaticText( self.GetLabelID(), 0, self.LabelWidth, 0, label, 0 )
         self.AddEditText( id, 0, self.TextBoxWidth, 0 )
         self.GroupEnd()
-    
+
+    def AddRadioBoxGroup(self, id, label, editTextID):
+        self.GroupBegin( self.GetLabelID(), 0, 3, 1, "", 0 )
+        self.AddStaticText(self.GetLabelID(), 0, self.LabelWidth, 0, label, 0)
+        self.AddRadioGroup(id)
+        self.AddChild(id, 0, "1 per Engine")
+        self.AddChild(id, 1, "1 per Core")
+        self.AddChild(id, 2, "xCPUs")
+        self.AddEditText(editTextID, 0, 280, 0)
+        self.Enable(editTextID, False)
+        self.GroupEnd()
+         
     def AddComboBoxGroup( self, id, label, checkboxID=-1, checkboxLabel="" ):
         self.GroupBegin( self.GetLabelID(), 0, 3, 1, "", 0 )
         self.AddStaticText( self.GetLabelID(), 0, self.LabelWidth, 0, label, 0 )
         self.AddComboBox( id, 0, self.ComboBoxWidth, 0 )
         if checkboxID >= 0 and checkboxLabel != "":
-            self.AddCheckbox( checkboxID, 0, self.LabelWidth + self.ComboBoxWidth + 12, 0, checkboxLabel )
+            self.AddCheckbox( checkboxID, 0, 
+                    self.LabelWidth + self.ComboBoxWidth + 12, 0, checkboxLabel )
         else:
-            self.AddStaticText( self.GetLabelID(), 0, self.LabelWidth + self.ComboBoxWidth + 12, 0, "", 0 )
+            self.AddStaticText( self.GetLabelID(), 0, 
+                    self.LabelWidth + self.ComboBoxWidth + 12, 0, "", 0 )
         self.GroupEnd()
     
     def AddRangeBoxGroup( self, id, label, min, max, inc, checkboxID=-1, checkboxLabel="" ):
         self.GroupBegin( self.GetLabelID(), 0, 3, 1, "", 0 )
         self.AddStaticText( self.GetLabelID(), 0, self.LabelWidth, 0, label, 0 )
-        self.AddEditNumberArrows( id, 0, self.RangeBoxWidth, 0 )
+        self.AddEditNumberArrows(id, 0, self.RangeBoxWidth, 0)
         if checkboxID >= 0 and checkboxLabel != "":
-            self.AddCheckbox( checkboxID, 0, self.LabelWidth + self.ComboBoxWidth + 12, 0, checkboxLabel )
+            self.AddCheckbox( checkboxID, 0, 
+                    self.LabelWidth + self.ComboBoxWidth + 12, 0, checkboxLabel )
         else:
-            self.AddStaticText( self.GetLabelID(), 0, self.LabelWidth + self.RangeBoxWidth + 4, 0, "", 0 )
+            self.AddStaticText( self.GetLabelID(), 0, 
+                    self.LabelWidth + self.RangeBoxWidth + 4, 0, "", 0 )
         self.SetLong( id, min, min, max, inc )
         self.GroupEnd()
     
@@ -103,33 +133,31 @@ class SubmitC4DToSmedgeDialog(gui.GeDialog):
         self.AddButton( buttonID, 0, 8, 0, "..." )
         self.GroupEnd()
     
-    def AddRadioGroup( self, radioboxID, radioLabel):
-        self.GroupBegin( self.GetLabelID(), 0, 2, 1, "", 0)
-        self.AddStaticText( radioboxID, 0, self.LabelWidth, 0, radioLabel)
-        # TODO
-        self.GroupEnd()
-
     ## This is called when the dialog is initialized.
     def CreateLayout(self):
         self.SetTitle( "Submit To Smedge")
         
         # General Options Tab
-        #self.TabGroupBegin(self.GetLabelID(), 0)
         self.GroupBegin(self.GetLabelID(), 0, 0, 20, "General Options", 0)
         self.GroupBorderNoTitle(c4d.BORDER_NONE)
         
         self.StartGroup("Basic Job Info")
+        
         self.AddTextBoxGroup(self.NameBoxID, "Name")
+        self.AddTextBoxGroup(self.CreatorBoxID, "Creator")
         self.AddRangeBoxGroup(self.PriorityBoxID, "Priority", 0, 100, 1)
-        # Paused CheckBox
-        # Processes RatioBox
+        self.AddRadioBoxGroup(self.RadioBoxID, "Processes", self.CPUsBoxID)
+        
+        self.GroupBegin( self.GetLabelID(), 0, 3, 1, "", 0 )
+        self.AddStaticText( self.GetLabelID(), 0, self.LabelWidth, 0, "Paused", 0 )
+        self.AddCheckbox( self.PausedBoxID, 0, self.LabelWidth, 0, "")
+        self.AddStaticText( self.GetLabelID(), 0, 410, 0, "", 0)
+        self.GroupEnd()
+        
+        
         self.AddComboBoxGroup(self.PoolBoxID, "Pool")
         self.AddComboBoxGroup(self.WaitForBoxID, "Wait For")
-
-        self.GroupBegin( self.GetLabelID(), 0, 2, 1, "", 0 )
-        self.AddStaticText( self.GetLabelID(), 0, 0, 0, "Paused", 0 )
-        self.AddCheckbox( self.PausedBoxID, 0, self.LabelWidth, 0, "")
-        self.GroupEnd()
+        self.AddTextBoxGroup(self.NoteBoxID, "Note")
 
         self.EndGroup()
         
@@ -148,7 +176,10 @@ class SubmitC4DToSmedgeDialog(gui.GeDialog):
         
         return True
 
+
+    ##
     ## This is called after the dialog has been initialized.
+    ##
     def InitValues(self):
         scene = documents.GetActiveDocument()
         sceneName = scene.GetDocumentName()
@@ -187,10 +218,10 @@ class SubmitC4DToSmedgeDialog(gui.GeDialog):
         initName = sceneName
         initPool = "Whole System"
         initPriority = 0
-        
         initFrames = frameList
         initPacketSize = 10
         initThreads = 0
+        initCreator = getpass.getuser()
         
         # Populate the combox boxes
         selectedPoolID = 0
@@ -199,23 +230,44 @@ class SubmitC4DToSmedgeDialog(gui.GeDialog):
             if initPool == self.Pools[i]:
                 selectedPoolID = i
         
+        self.SetLong(self.RadioBoxID, 0)
         self.SetString(self.NameBoxID, initName)
         self.SetLong(self.PoolBoxID, selectedPoolID)
         self.SetLong(self.PriorityBoxID, initPriority)
         self.SetString(self.FramesBoxID, initFrames)
         self.SetString(self.PacketBoxID, initPacketSize)
+        self.SetString(self.CreatorBoxID, initCreator)
         
         return True
     
+
+    ##
     ## This is called when a user clicks on a button or changes the value of a field.
+    ##
     def Command(self, id, msg):
+        
+        if id == self.RadioBoxID:
+            if self.GetLong(self.RadioBoxID) == 2:
+                self.Enable(self.CPUsBoxID, True)
+            else:
+                self.Enable(self.CPUsBoxID, False)
+        
         if id == self.SubmitButtonID or id == self.CancelButtonID:
             jobName =  self.GetString(self.NameBoxID)
             pool = self.Pools[self.GetLong(self.PoolBoxID)]
             priority = self.GetLong(self.PriorityBoxID)
             frames = self.GetString(self.FramesBoxID)
-            packetSize = self.GetLong(self.PacketBoxID)
+            packetSize = self.GetString(self.PacketBoxID)
+            note = self.GetString(self.NoteBoxID)
+            paused = self.GetBool(self.PausedBoxID)
+            creator = self.GetString(self.CreatorBoxID)
         
+            cpus = 0
+            if self.GetLong(self.RadioBoxID) == 2:
+                cpus = self.GetString(self.CPUsBoxID)
+            else:
+                cpus = self.GetLong(self.RadioBoxID)
+            
             if id == self.SubmitButtonID:
                 scene = documents.GetActiveDocument()
                 sceneName = scene.GetDocumentName()
@@ -246,13 +298,15 @@ class SubmitC4DToSmedgeDialog(gui.GeDialog):
                 cmd += " -Name " + str(sceneName)
                 cmd += " -PacketSize " + str(packetSize)
                 cmd += " -Pool " + str(pool)
-                #cmd += " -CPUs 4"
-                #cmd += " -Paused"
+                if note: cmd += " -Note " + str(note)
+                cmd += " -CPUs " +str(cpus)
+                if paused: cmd += " -Paused"
                 
                 print(cmd)
                 #subprocess.call(cmd)
             self.Close()
         return True
+
 
 
 ## Class to create the submission menu item in C4D.
@@ -299,5 +353,5 @@ def main(path):
 if __name__ == '__main__':
     if SaveScene():
         dialog = SubmitC4DToSmedgeDialog()
-        dialog.Open(c4d.DLG_TYPE_MODAL)
+        dialog.Open(c4d.DLG_TYPE_MODAL, xpos=250, ypos=250)
 
