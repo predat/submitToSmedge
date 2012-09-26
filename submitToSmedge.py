@@ -119,20 +119,6 @@ class SubmitC4DToSmedgeDialog(gui.GeDialog):
         self.SetLong( id, min, min, max, inc )
         self.GroupEnd()
     
-    def AddSelectionBoxGroup( self, id, label, buttonID ):
-        self.GroupBegin( self.GetLabelID(), 0, 3, 1, "", 0 )
-        self.AddStaticText( self.GetLabelID(), 0, self.LabelWidth, 0, label, 0 )
-        self.AddEditText( id, 0, self.TextBoxWidth - 56, 0 )
-        self.AddButton( buttonID, 0, 8, 0, "..." )
-        self.GroupEnd()
-    
-    def AddCheckboxGroup( self, checkboxID, checkboxLabel, textID, buttonID ):
-        self.GroupBegin( self.GetLabelID(), 0, 3, 1, "", 0 )
-        self.AddCheckbox( checkboxID, 0, self.LabelWidth, 0, checkboxLabel )
-        self.AddEditText( textID, 0, self.TextBoxWidth - 56, 0 )
-        self.AddButton( buttonID, 0, 8, 0, "..." )
-        self.GroupEnd()
-    
     ## This is called when the dialog is initialized.
     def CreateLayout(self):
         self.SetTitle( "Submit To Smedge")
