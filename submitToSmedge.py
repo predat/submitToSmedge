@@ -11,6 +11,11 @@ __status__ = "Development"
 
 import os, sys, subprocess, getpass
 
+try:
+    import ConfigParser
+except:
+    print("Could not load ConfigParser module, sticky settings will not be loaded/saved" )
+
 import c4d
 from c4d import documents
 from c4d import gui
@@ -22,6 +27,7 @@ class SubmitC4DToSmedgeDialog(gui.GeDialog):
     
     SmedgeSubmitCommand = ""
     SmedgePoolManagerCommand = ""
+    ConfigFile = ""
     Pools = []
     
     LabelWidth = 200
@@ -70,6 +76,9 @@ class SubmitC4DToSmedgeDialog(gui.GeDialog):
             print("Error getting pools from Smedge")
         
         self.Pools.append("Whole System")
+
+        self.ConfigFile = os.path.join(os.path.dirname(os.path.abspath(__file__)), "c4d_py_submission.ini")
+	print "-ConfigFile: "+self.ConfigFile
     
     def GetLabelID(self):
         self.LabelID = self.LabelID + 1
@@ -131,7 +140,6 @@ class SubmitC4DToSmedgeDialog(gui.GeDialog):
     ##
     def CreateLayout(self):
         self.SetTitle( "Submit To Smedge")
-        
 
         # General Options Tab
         self.TabGroupBegin( self.GetLabelID(), 0 )
@@ -224,13 +232,32 @@ class SubmitC4DToSmedgeDialog(gui.GeDialog):
         initThreads = 0
         initCreator = getpass.getuser()
         
+        try:
+            if os.path.isfile(self.ConfigFile):
+                config = ConfigParser.ConfigParser()
+                config.read(self.ConfigFile)
+
+                if config.has_section("Sticky"):
+                    if config.has_option("Sticky", "Pool"):
+                        initPool = config.get( "Sticky", "Pool")
+                    if config.has_option("Sticky", "PacketSize"):
+                        initPacketSize = config.get("Sticky", "PacketSize")
+                    if config.has_option("Sticky", "FrameList"):
+                        initFrames = config.get("Sticky", "FrameList")
+                    if config.has_option("Sticky", "Creator"):
+                        initCreator = config.get("Sticky", "Creator")
+
+        except:
+            print(" Could not read sticky settings")
+
+
         # Populate the combox boxes
         selectedPoolID = 0
         for i in range(0, len(self.Pools)):
             self.AddChild(self.PoolBoxID, i, self.Pools[i])
             if initPool == self.Pools[i]:
                 selectedPoolID = i
-        
+
         self.SetLong(self.RadioBoxID, 0)
         self.SetString(self.NameBoxID, initName)
         self.SetLong(self.PoolBoxID, selectedPoolID)
@@ -277,6 +304,23 @@ class SubmitC4DToSmedgeDialog(gui.GeDialog):
             else:
                 cpus = self.GetLong(self.RadioBoxID)
             
+
+            try:
+                config = ConfigParser.ConfigParser()
+                config.add_section("Sticky")
+
+                config.set("Sticky", "Pool", pool)
+                config.set("Sticky", "PacketSize", packetSize)
+                config.set("Sticky", "FrameList", frames)
+                config.set("Sticky", "Creator", creator)
+
+                fileHandle = open(self.ConfigFile, "w")
+                config.write(fileHandle)
+                fileHandle.close()
+            except:
+                print(' Could not write sticky settings')
+
+
             if id == self.SubmitButtonID:
                 scene = documents.GetActiveDocument()
                 sceneName = scene.GetDocumentName()
@@ -307,12 +351,13 @@ class SubmitC4DToSmedgeDialog(gui.GeDialog):
                 cmd += " -Name " + str(sceneName)
                 cmd += " -PacketSize " + str(packetSize)
                 cmd += " -Pool " + str(pool)
+                cmd += " -Creator " + str(creator)
                 if note: cmd += " -Note " + str(note)
                 cmd += " -CPUs " +str(cpus)
                 if paused: cmd += " -Paused"
                 
                 print(cmd)
-                #subprocess.call(cmd)
+                subprocess.call(cmd, shell=True)
             self.Close()
         return True
 
@@ -338,7 +383,6 @@ class SubmitC4DtoSmedgeMenu (plugins.CommandData):
 
 ## Global function to save the scene. Returns True if the scene has been saved and it's OK to continue.
 def SaveScene():
-    """
     scene = documents.GetActiveDocument()
     
     # Save the scene if required
@@ -348,7 +392,6 @@ def SaveScene():
         if scene.GetDocumentPath() == "":
             gui.MessageDialog("The scene must saved before it can be submitted to Smedge")
             return False
-    """
     return True
 
 
